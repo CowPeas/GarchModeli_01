@@ -26,3 +26,7 @@ pytest>=7.4.0
 yfinance>=0.2.28          # Yahoo Finance veri indirme
 arch>=6.2.0               # GARCH modelleri
 
+# FAZE 5 - PIML Entegrasyonu
+torch>=2.0.0              # PyTorch (GRN için)
+pysr>=0.15.0              # Symbolic Regression (opsiyonel)
+
