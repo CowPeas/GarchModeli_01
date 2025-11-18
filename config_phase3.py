@@ -51,15 +51,18 @@ GARCH_CONFIG = {
     'ar_lags': 1                 # AR gecikmeleri
 }
 
-# GRM Schwarzschild parametreleri (FAZE 1)
+# GRM Schwarzschild parametreleri (FAZE 1 + FAZE 4)
 SCHWARZSCHILD_CONFIG = {
     'window_size': 20,
     'alpha_range': [0.1, 0.5, 1.0, 2.0],
     'beta_range': [0.01, 0.05, 0.1],
-    'shock_threshold_quantile': 0.99
+    'use_decay': True,
+    'decay_beta_range': [0.01, 0.05, 0.1, 0.2],
+    'shock_threshold_quantile': 0.95,
+    'shock_detection_method': 'quantile'  # 'quantile' veya 'statistical'
 }
 
-# GRM Kerr parametreleri (FAZE 2)
+# GRM Kerr parametreleri (FAZE 2 + FAZE 4)
 KERR_CONFIG = {
     'window_size': 20,
     'alpha_range': [0.1, 0.5, 1.0, 2.0],
@@ -67,7 +70,10 @@ KERR_CONFIG = {
     'gamma_range': [0, 0.5, 1.0],
     'use_tanh': True,
     'regime': 'adaptive',
-    'shock_threshold_quantile': 0.99
+    'use_decay': True,
+    'decay_beta_range': [0.01, 0.05, 0.1, 0.2],
+    'shock_threshold_quantile': 0.95,
+    'shock_detection_method': 'quantile'  # 'quantile' veya 'statistical'
 }
 
 # Görselleştirme parametreleri

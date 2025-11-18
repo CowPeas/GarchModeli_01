@@ -201,12 +201,24 @@ def walk_forward_predict_grm(
     # Baslangic reziduellerini sakla
     all_residuals = list(baseline_model.get_residuals())
     
+    # Şok tespiti (ilk iterasyonda)
+    shock_times = None
+    if len(all_residuals) > 0:
+        shock_times = grm_model.detect_shocks(np.array(all_residuals))
+    
     for i in range(len(test_data)):
         # 1. Baseline tahmin
         baseline_pred = baseline_model.predict(steps=1)[0]
         baseline_preds.append(baseline_pred)
         
-        # 2. GRM bukulmesi hesapla
+        # 2. Time since shock hesapla
+        current_time = len(all_residuals)
+        tau = grm_model.compute_time_since_shock(
+            current_time=current_time,
+            shock_times=shock_times
+        )
+        
+        # 3. GRM bukulmesi hesapla (decay ile)
         # Son window_size kadar rezidueli kullan
         recent_residuals = np.array(all_residuals[-grm_model.window_size:])
         
@@ -218,14 +230,16 @@ def walk_forward_predict_grm(
             correction = grm_model.compute_curvature_single(
                 recent_residuals[-1] if len(recent_residuals) > 0 else 0.0,
                 mass,
-                spin
+                spin,
+                time_since_shock=tau
             )
         else:
             # Schwarzschild model
             mass = grm_model.compute_mass(recent_residuals)[-1] if len(recent_residuals) > 0 else 0.0
             correction = grm_model.compute_curvature_single(
                 recent_residuals[-1] if len(recent_residuals) > 0 else 0.0,
-                mass
+                mass,
+                time_since_shock=tau
             )
         
         grm_corrections.append(correction)
@@ -233,14 +247,18 @@ def walk_forward_predict_grm(
         if verbose and (i % 20 == 0):
             print(f"   Walk-forward GRM: {i+1}/{len(test_data)}")
         
-        # 3. Gercek degeri gozlemle
+        # 4. Gercek degeri gozlemle
         actual = test_data.iloc[i]
         
-        # 4. Rezidueli hesapla ve sakla
+        # 5. Rezidueli hesapla ve sakla
         residual = actual - baseline_pred
         all_residuals.append(residual)
         
-        # 5. Baseline modeli guncelle
+        # 6. Şok tespiti güncelle (yeni rezidüel eklendi)
+        if len(all_residuals) > grm_model.window_size:
+            shock_times = grm_model.detect_shocks(np.array(all_residuals))
+        
+        # 7. Baseline modeli guncelle
         if i < len(test_data) - 1:
             try:
                 baseline_model.fitted_model = baseline_model.fitted_model.append(

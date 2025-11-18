@@ -16,6 +16,8 @@ from models.visualization import ResultVisualizer
 from models.real_data_loader import RealDataLoader, load_popular_assets
 from models.garch_model import GARCHModel, SimpleVolatilityModel
 from models.alternative_data_loader import AlternativeDataLoader, create_manual_download_guide
+from models.ablation_study import AblationStudy
+from models.cross_validation import TimeSeriesCrossValidator
 
 __all__ = [
     'SyntheticDataGenerator',
@@ -29,7 +31,9 @@ __all__ = [
     'GARCHModel',
     'SimpleVolatilityModel',
     'AlternativeDataLoader',
-    'create_manual_download_guide'
+    'create_manual_download_guide',
+    'AblationStudy',
+    'TimeSeriesCrossValidator'
 ]
 
 __version__ = '3.0.0'
