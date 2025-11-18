@@ -131,8 +131,8 @@ def walk_forward_predict_multi_body(
         regime_ids.append(regime_id)
         
         if verbose and (i % 20 == 0):
-            print(f"   Walk-forward Multi-Body: {i+1}/{len(test_data)} "
-                  f"(Regime: {regime_id})")
+            # Progress logging handled by main logger
+            pass
         
         # Gerçek değeri gözlemle
         actual = test_data.iloc[i]
@@ -160,11 +160,25 @@ def run_multi_body_grm_test():
     """
     Multi-Body GRM test sürecini çalıştırır.
     """
-    print("\n" + "=" * 80)
-    print("MULTI-BODY GRM TEST - FAZE 6")
-    print("=" * 80)
-    print(f"Başlangıç Zamanı: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 80 + "\n")
+    import logging
+    
+    # Logger oluştur
+    logger = logging.getLogger('MultiBodyGRM')
+    logger.setLevel(logging.INFO)
+    
+    # Console handler
+    if not logger.handlers:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+    
+    logger.info("\n" + "=" * 80)
+    logger.info("MULTI-BODY GRM TEST - FAZE 6")
+    logger.info("=" * 80)
+    logger.info(f"Başlangıç Zamanı: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info("=" * 80 + "\n")
     
     # Dizinleri oluştur
     for path in OUTPUT_PATHS.values():
@@ -173,8 +187,8 @@ def run_multi_body_grm_test():
     # ========================================================================
     # ADIM 1: VERİ YÜKLEME
     # ========================================================================
-    print("[VERI] ADIM 1: Veri Yükleme")
-    print("-" * 80)
+    logger.info("[ADIM 1] VERİ YÜKLEME")
+    logger.info("-" * 80)
     
     loader = RealDataLoader()
     alt_loader = AlternativeDataLoader()
@@ -184,20 +198,20 @@ def run_multi_body_grm_test():
     csv_path = os.path.join(OUTPUT_PATHS['data'], f"{REAL_DATA_CONFIG['ticker']}.csv")
     
     if os.path.exists(csv_path):
-        print(f"[OK] MANUEL CSV BULUNDU: {csv_path}\n")
+        logger.info(f"[OK] MANUEL CSV BULUNDU: {csv_path}")
         try:
             df = alt_loader.load_from_csv(
                 filepath=csv_path,
                 date_column='Date',
                 price_column='Close'
             )
-            print(f"[OK] CSV'DEN YÜKLEME BAŞARILI! ({len(df)} gözlem)\n")
+            logger.info(f"[OK] CSV'DEN YÜKLEME BAŞARILI! ({len(df)} gözlem)\n")
         except Exception as e:
-            print(f"[HATA] CSV okuma hatası: {str(e)}\n")
+            logger.error(f"[HATA] CSV okuma hatası: {str(e)}\n")
     
     # Otomatik indirme
     if df is None:
-        print("[DOWNLOAD] OTOMATIK İNDİRME BAŞLATILIYOR...\n")
+        logger.info("[DOWNLOAD] OTOMATIK İNDİRME BAŞLATILIYOR...")
         try:
             df, metadata = loader.load_yahoo_finance(
                 ticker=REAL_DATA_CONFIG['ticker'],
@@ -206,17 +220,17 @@ def run_multi_body_grm_test():
                 column='Close',
                 verify_ssl=False
             )
-            print(f"[OK] Otomatik indirme başarılı!\n")
+            logger.info(f"[OK] Otomatik indirme başarılı! ({len(df)} gözlem)\n")
         except Exception as e:
-            print(f"[HATA] Otomatik indirme başarısız\n")
-            print("[FALLBACK] Gerçekçi sentetik veri oluşturuluyor...\n")
+            logger.warning(f"[HATA] Otomatik indirme başarısız: {str(e)}")
+            logger.info("[FALLBACK] Gerçekçi sentetik veri oluşturuluyor...")
             
             df = alt_loader.generate_realistic_crypto_data(
                 days=730,
                 initial_price=30000.0 if 'BTC' in REAL_DATA_CONFIG['ticker'] else 100.0,
                 volatility=0.03
             )
-            print(f"[OK] Sentetik veri hazır! ({len(df)} gözlem)\n")
+            logger.info(f"[OK] Sentetik veri hazır! ({len(df)} gözlem)\n")
     
     # Veri formatını düzelt
     if 'y' not in df.columns and 'returns' in df.columns:
@@ -228,23 +242,25 @@ def run_multi_body_grm_test():
     # ========================================================================
     # ADIM 2: VERİ BÖLME
     # ========================================================================
-    print("[SPLIT] ADIM 2: Veri Bölme (Train/Val/Test)")
-    print("-" * 80)
+    logger.info("[ADIM 2] VERİ BÖLME (Train/Val/Test)")
+    logger.info("-" * 80)
     
     train_df, val_df, test_df = split_data(df, **SPLIT_CONFIG)
-    print(f"[OK] Train: {len(train_df)} (%{SPLIT_CONFIG['train_ratio']*100:.0f})")
-    print(f"[OK] Val:   {len(val_df)} (%{SPLIT_CONFIG['val_ratio']*100:.0f})")
-    print(f"[OK] Test:  {len(test_df)} (%{SPLIT_CONFIG['test_ratio']*100:.0f})\n")
+    logger.info(f"[OK] Train: {len(train_df)} gözlem (%{SPLIT_CONFIG['train_ratio']*100:.0f})")
+    logger.info(f"[OK] Val:   {len(val_df)} gözlem (%{SPLIT_CONFIG['val_ratio']*100:.0f})")
+    logger.info(f"[OK] Test:  {len(test_df)} gözlem (%{SPLIT_CONFIG['test_ratio']*100:.0f})\n")
     
     # ========================================================================
     # ADIM 3: BASELINE MODEL VE REZİDÜELLER
     # ========================================================================
-    print("[BASELINE] ADIM 3: Baseline Model ve Rezidüeller")
-    print("-" * 80)
+    logger.info("[ADIM 3] BASELINE MODEL VE REZİDÜELLER")
+    logger.info("-" * 80)
     
+    logger.info("Baseline ARIMA modeli oluşturuluyor...")
     baseline = BaselineARIMA()
     
     # Grid search
+    logger.info("Grid search başlatılıyor (p, d, q parametreleri)...")
     best_order = baseline.grid_search(
         train_df['y'], val_df['y'],
         p_range=[0, 1, 2],
@@ -252,21 +268,25 @@ def run_multi_body_grm_test():
         q_range=[0, 1, 2],
         verbose=False
     )
+    logger.info(f"[OK] En iyi ARIMA parametreleri: {best_order}")
     
     # Fit
+    logger.info("Baseline model eğitiliyor...")
     baseline.fit(train_df['y'], order=best_order)
     train_residuals = baseline.get_residuals()
     
-    print(f"[OK] Baseline: ARIMA{best_order}")
-    print(f"[OK] Train rezidüelleri: {len(train_residuals)} gözlem\n")
+    logger.info(f"[OK] Baseline: ARIMA{best_order}")
+    logger.info(f"[OK] Train rezidüelleri: {len(train_residuals)} gözlem\n")
     
     # ========================================================================
     # ADIM 4: MULTI-BODY GRM EĞİTİMİ
     # ========================================================================
-    print("[MULTI-BODY] ADIM 4: Multi-Body GRM Eğitimi")
-    print("-" * 80)
+    logger.info("[ADIM 4] MULTI-BODY GRM EĞİTİMİ")
+    logger.info("-" * 80)
     
     window_size = SCHWARZSCHILD_CONFIG['window_size']
+    logger.info(f"Pencere boyutu: {window_size}")
+    logger.info("Multi-Body GRM modeli oluşturuluyor...")
     
     multi_body_model = MultiBodyGRM(
         window_size=window_size,
@@ -275,18 +295,20 @@ def run_multi_body_grm_test():
         use_decay=True
     )
     
+    logger.info("Rejim tespiti ve GRM eğitimi başlatılıyor...")
     multi_body_model.fit(train_residuals)
     
-    print(f"[OK] Multi-Body GRM eğitildi!\n")
+    logger.info(f"[OK] Multi-Body GRM eğitildi!")
+    logger.info(f"[OK] Tespit edilen rejim sayısı: {len(multi_body_model.body_params)}\n")
     
     # ========================================================================
     # ADIM 5: TEST VE KARŞILAŞTIRMA
     # ========================================================================
-    print("[TEST] ADIM 5: Test ve Karşılaştırma")
-    print("-" * 80)
+    logger.info("[ADIM 5] TEST VE KARŞILAŞTIRMA")
+    logger.info("-" * 80)
     
     # Manuel fonksiyon (Schwarzschild)
-    print("   Manuel fonksiyon (Schwarzschild) test ediliyor...")
+    logger.info("Manuel fonksiyon (Schwarzschild) test ediliyor...")
     manual_model = SchwarzschildGRM(
         window_size=window_size,
         use_decay=True
@@ -339,40 +361,41 @@ def run_multi_body_grm_test():
         
         return np.array(predictions)
     
+    logger.info("Walk-forward validation ile tahminler yapılıyor...")
     manual_predictions = walk_forward_predict_grm_simple(
         baseline, manual_model, test_df['y']
     )
     manual_rmse = calculate_rmse(test_df['y'].values, manual_predictions)
     
-    print(f"   Manuel fonksiyon RMSE: {manual_rmse:.6f}\n")
+    logger.info(f"[OK] Manuel fonksiyon RMSE: {manual_rmse:.6f}\n")
     
     # Multi-Body tahminleri
-    print("   Multi-Body GRM tahminleri yapılıyor...")
+    logger.info("Multi-Body GRM tahminleri yapılıyor...")
     baseline_preds, grm_corrections, multi_body_predictions, regime_ids = \
         walk_forward_predict_multi_body(
             baseline, multi_body_model, test_df['y'], verbose=True
         )
     multi_body_rmse = calculate_rmse(test_df['y'].values, multi_body_predictions)
     
-    print(f"   Multi-Body GRM RMSE: {multi_body_rmse:.6f}\n")
+    logger.info(f"[OK] Multi-Body GRM RMSE: {multi_body_rmse:.6f}\n")
     
     # Rejim analizi
     unique_regimes, regime_counts = np.unique(regime_ids, return_counts=True)
-    print("   Rejim Dağılımı:")
+    logger.info("Rejim Dağılımı:")
     for regime_id, count in zip(unique_regimes, regime_counts):
-        print(f"     Rejim {regime_id}: {count} gözlem (%{count/len(regime_ids)*100:.1f})")
-    print()
+        logger.info(f"  Rejim {regime_id}: {count} gözlem (%{count/len(regime_ids)*100:.1f})")
+    logger.info("")
     
     # Karşılaştırma
     improvement = (manual_rmse - multi_body_rmse) / manual_rmse * 100
     
-    print("=" * 80)
-    print("KARŞILAŞTIRMA SONUÇLARI")
-    print("=" * 80)
-    print(f"Manuel Fonksiyon RMSE: {manual_rmse:.6f}")
-    print(f"Multi-Body GRM RMSE:   {multi_body_rmse:.6f}")
-    print(f"İyileşme:              {improvement:+.2f}%")
-    print("=" * 80 + "\n")
+    logger.info("=" * 80)
+    logger.info("KARŞILAŞTIRMA SONUÇLARI")
+    logger.info("=" * 80)
+    logger.info(f"Manuel Fonksiyon RMSE: {manual_rmse:.6f}")
+    logger.info(f"Multi-Body GRM RMSE:   {multi_body_rmse:.6f}")
+    logger.info(f"İyileşme:              {improvement:+.2f}%")
+    logger.info("=" * 80 + "\n")
     
     # Sonuçları kaydet
     results_file = os.path.join(OUTPUT_PATHS['results'], 'multi_body_grm_results.txt')
@@ -395,12 +418,12 @@ def run_multi_body_grm_test():
                    f"β={params['beta']:.4f if params['beta'] else 'N/A'}, "
                    f"n={params['n_samples']}\n")
     
-    print(f"[OK] Sonuçlar kaydedildi: {results_file}\n")
+    logger.info(f"[OK] Sonuçlar kaydedildi: {results_file}\n")
     
-    print("=" * 80)
-    print("[SUCCESS] MULTI-BODY GRM TEST TAMAMLANDI!")
-    print("=" * 80)
-    print(f"Bitiş Zamanı: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    logger.info("=" * 80)
+    logger.info("[SUCCESS] MULTI-BODY GRM TEST TAMAMLANDI!")
+    logger.info("=" * 80)
+    logger.info(f"Bitiş Zamanı: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
     return {
         'manual_rmse': manual_rmse,
