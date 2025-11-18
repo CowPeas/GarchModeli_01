@@ -30,3 +30,6 @@ arch>=6.2.0               # GARCH modelleri
 torch>=2.0.0              # PyTorch (GRN için)
 pysr>=0.15.0              # Symbolic Regression (opsiyonel)
 
+# FAZE 6 - PIML İleri Seviye
+scikit-learn>=1.3.0       # DBSCAN clustering (Multi-Body GRM için)
+

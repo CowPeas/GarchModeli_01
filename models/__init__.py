@@ -22,6 +22,8 @@ from models.grn_network import GravitationalResidualNetwork
 from models.grn_trainer import GRNTrainer, GRMDataSet
 from models.grn_data_preparator import GRNDataPreparator
 from models.symbolic_discovery import SymbolicGRM
+from models.unified_grm import UnifiedGRM
+from models.multi_body_grm import MultiBodyGRM
 
 __all__ = [
     'SyntheticDataGenerator',
@@ -42,7 +44,9 @@ __all__ = [
     'GRNTrainer',
     'GRMDataSet',
     'GRNDataPreparator',
-    'SymbolicGRM'
+    'SymbolicGRM',
+    'UnifiedGRM',
+    'MultiBodyGRM'
 ]
 
 __version__ = '3.0.0'
