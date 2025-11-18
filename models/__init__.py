@@ -11,7 +11,7 @@ from models.data_generator import SyntheticDataGenerator
 from models.baseline_model import BaselineARIMA
 from models.grm_model import SchwarzschildGRM
 from models.kerr_grm_model import KerrGRM
-from models.metrics import ModelEvaluator
+from models.metrics import ModelEvaluator, calculate_rmse, calculate_mae
 from models.visualization import ResultVisualizer
 from models.real_data_loader import RealDataLoader, load_popular_assets
 from models.garch_model import GARCHModel, SimpleVolatilityModel
@@ -31,6 +31,8 @@ __all__ = [
     'SchwarzschildGRM',
     'KerrGRM',
     'ModelEvaluator',
+    'calculate_rmse',
+    'calculate_mae',
     'ResultVisualizer',
     'RealDataLoader',
     'load_popular_assets',

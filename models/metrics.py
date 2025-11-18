@@ -305,3 +305,42 @@ class ModelEvaluator:
         
         print("=" * 70 + "\n")
 
+
+# Convenience functions for backward compatibility
+def calculate_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """
+    Root Mean Squared Error hesaplar (convenience function).
+    
+    Parameters
+    ----------
+    y_true : np.ndarray
+        Gerçek değerler
+    y_pred : np.ndarray
+        Tahmin değerleri
+        
+    Returns
+    -------
+    float
+        RMSE değeri
+    """
+    return ModelEvaluator.rmse(y_true, y_pred)
+
+
+def calculate_mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """
+    Mean Absolute Error hesaplar (convenience function).
+    
+    Parameters
+    ----------
+    y_true : np.ndarray
+        Gerçek değerler
+    y_pred : np.ndarray
+        Tahmin değerleri
+        
+    Returns
+    -------
+    float
+        MAE değeri
+    """
+    return ModelEvaluator.mae(y_true, y_pred)
+
