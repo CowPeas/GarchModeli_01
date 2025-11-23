@@ -117,9 +117,18 @@ class GRMLogger:
         """Error seviyesinde log yazar."""
         self.logger.error(message)
     
-    def debug(self, message: str) -> None:
-        """Debug seviyesinde log yazar."""
-        self.logger.debug(message)
+    def debug(self, message: str, exc_info: bool = False) -> None:
+        """
+        Debug seviyesinde log yazar.
+        
+        Parameters
+        ----------
+        message : str
+            Log mesajı
+        exc_info : bool, optional
+            Exception bilgisini ekle (varsayılan: False)
+        """
+        self.logger.debug(message, exc_info=exc_info)
     
     def section(self, title: str, char: str = '=') -> None:
         """

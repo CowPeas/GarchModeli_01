@@ -17,8 +17,11 @@ from datetime import datetime
 # Windows encoding fix
 if sys.platform == 'win32':
     import codecs
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
-    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    # Check if stdout/stderr already have buffer attribute (not wrapped yet)
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
 # Matplotlib backend
 import matplotlib
@@ -334,12 +337,23 @@ def run_multi_body_grm_test():
             recent_residuals = np.array(all_residuals[-grm_model.window_size:])
             
             if len(recent_residuals) > 0:
-                mass = grm_model.compute_mass(recent_residuals)[-1]
-                correction = grm_model.compute_curvature_single(
-                    recent_residuals[-1], mass, time_since_shock=tau
-                )
+                # NaN temizle
+                recent_clean = recent_residuals[~np.isnan(recent_residuals)]
+                if len(recent_clean) > 0:
+                    mass = grm_model.compute_mass(recent_clean)[-1]
+                    correction = grm_model.compute_curvature_single(
+                        recent_clean[-1], mass, time_since_shock=tau
+                    )
+                else:
+                    correction = 0.0
             else:
                 correction = 0.0
+            
+            # NaN kontrolü
+            if np.isnan(baseline_pred) or np.isnan(correction):
+                correction = 0.0
+            if np.isnan(baseline_pred):
+                baseline_pred = 0.0
             
             final_pred = baseline_pred + correction
             predictions.append(final_pred)
@@ -413,9 +427,10 @@ def run_multi_body_grm_test():
             f.write(f"  Rejim {regime_id}: {count} gözlem (%{count/len(regime_ids)*100:.1f})\n")
         f.write("\nBODY PARAMETRELERİ:\n")
         for params in multi_body_model.body_params:
+            beta_str = f"{params['beta']:.4f}" if params['beta'] else "N/A"
             f.write(f"  Body {params['body_id']}: "
                    f"α={params['alpha']:.4f}, "
-                   f"β={params['beta']:.4f if params['beta'] else 'N/A'}, "
+                   f"β={beta_str}, "
                    f"n={params['n_samples']}\n")
     
     logger.info(f"[OK] Sonuçlar kaydedildi: {results_file}\n")

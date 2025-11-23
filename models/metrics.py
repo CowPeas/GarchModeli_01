@@ -36,7 +36,17 @@ class ModelEvaluator:
         float
             RMSE değeri
         """
-        return np.sqrt(np.mean((y_true - y_pred) ** 2))
+        # NaN ve inf değerlerini temizle
+        mask = ~(np.isnan(y_true) | np.isnan(y_pred) | 
+                 np.isinf(y_true) | np.isinf(y_pred))
+        
+        if not np.any(mask):
+            return np.nan
+        
+        y_true_clean = y_true[mask]
+        y_pred_clean = y_pred[mask]
+        
+        return np.sqrt(np.mean((y_true_clean - y_pred_clean) ** 2))
     
     @staticmethod
     def mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -55,7 +65,17 @@ class ModelEvaluator:
         float
             MAE değeri
         """
-        return np.mean(np.abs(y_true - y_pred))
+        # NaN ve inf değerlerini temizle
+        mask = ~(np.isnan(y_true) | np.isnan(y_pred) | 
+                 np.isinf(y_true) | np.isinf(y_pred))
+        
+        if not np.any(mask):
+            return np.nan
+        
+        y_true_clean = y_true[mask]
+        y_pred_clean = y_pred[mask]
+        
+        return np.mean(np.abs(y_true_clean - y_pred_clean))
     
     @staticmethod
     def mape(y_true: np.ndarray, y_pred: np.ndarray) -> float:

@@ -212,8 +212,9 @@ class MultiBodyGRM:
                 'grm_model': grm  # Full model'i sakla
             })
             
+            beta_str = f"{grm.beta:.4f}" if self.use_decay else "N/A"
             print(f"  Rejim {regime_id}: α={grm.alpha:.4f}, "
-                  f"β={grm.beta:.4f if self.use_decay else 'N/A'}, "
+                  f"β={beta_str}, "
                   f"n={len(regime_residuals)}")
         
         print(f"[MultiBodyGRM] {len(self.body_params)} body eğitildi\n")
@@ -250,12 +251,21 @@ class MultiBodyGRM:
         # Mevcut pencere için feature hesapla
         window = residuals[current_time - self.window_size:current_time]
         
+        # Boş pencere kontrolü
+        if len(window) == 0:
+            return 0
+        
+        # NaN içeren değerleri filtrele
+        window_clean = window[~np.isnan(window)]
+        if len(window_clean) == 0:
+            return 0
+        
         features = np.array([
-            np.mean(window),
-            np.std(window),
-            np.max(window),
-            np.min(window),
-            self.compute_autocorr(window)
+            np.mean(window_clean),
+            np.std(window_clean) if len(window_clean) > 1 else 0.0,
+            np.max(window_clean),
+            np.min(window_clean),
+            self.compute_autocorr(window_clean)
         ])
         
         # Normalize
@@ -316,6 +326,11 @@ class MultiBodyGRM:
         if len(recent_residuals) == 0:
             return 0.0
         
+        # NaN temizle
+        recent_residuals = recent_residuals[~np.isnan(recent_residuals)]
+        if len(recent_residuals) == 0:
+            return 0.0
+        
         total_curvature = 0.0
         
         for params in self.body_params:
@@ -329,8 +344,16 @@ class MultiBodyGRM:
                 weight = 0.1
             
             # Bu body'nin katkısı
-            mass = grm_model.compute_mass(recent_residuals)[-1]
+            mass_arr = grm_model.compute_mass(recent_residuals)
+            if len(mass_arr) == 0:
+                continue
+                
+            mass = mass_arr[-1]
             last_residual = recent_residuals[-1]
+            
+            # NaN kontrolü
+            if np.isnan(mass) or np.isnan(last_residual):
+                continue
             
             # Basit curvature (Schwarzschild)
             gamma_i = grm_model.alpha * mass * np.sign(last_residual)
@@ -342,7 +365,9 @@ class MultiBodyGRM:
                 decay = 1.0 / (1.0 + params['beta'] * tau)
                 gamma_i *= decay
             
-            total_curvature += weight * gamma_i
+            # NaN kontrolü
+            if not np.isnan(gamma_i):
+                total_curvature += weight * gamma_i
         
         return float(total_curvature)
     

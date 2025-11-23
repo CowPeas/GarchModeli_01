@@ -85,11 +85,21 @@ class SchwarzschildGRM:
         
         for t in range(self.window_size, n):
             window = residuals[t - self.window_size:t]
-            mass[t] = np.var(window)
+            # NaN temizle
+            window_clean = window[~np.isnan(window)]
+            if len(window_clean) > 1:
+                mass[t] = np.var(window_clean)
+            else:
+                mass[t] = 0.0
         
         # İlk pencere için ortalama değer kullan
         if self.window_size > 0:
-            avg_mass = np.mean(mass[self.window_size:])
+            valid_mass = mass[self.window_size:]
+            valid_mass = valid_mass[~np.isnan(valid_mass)]
+            if len(valid_mass) > 0:
+                avg_mass = np.mean(valid_mass)
+            else:
+                avg_mass = 0.0
             mass[:self.window_size] = avg_mass
         
         self.mass_series = mass
