@@ -31,6 +31,16 @@ from models.advanced_metrics import AdvancedMetrics, BootstrapCI
 from models.comprehensive_comparison import ComprehensiveComparison, quick_compare
 from models.regime_analysis import RegimeAnalyzer, analyze_regime_diversity, recommend_dbscan_params
 
+# ADVANCED ROADMAP MODULES (FAZ 1-5) - PEP8/PEP257
+from models.power_analysis import StatisticalPowerAnalyzer, quick_power_check
+from models.regime_markov_analysis import RegimeMarkovAnalyzer, analyze_regime_coverage
+from models.dbscan_optimizer import DBSCANOptimizer, auto_tune_dbscan
+from models.grm_feature_engineering import GRMFeatureEngineer
+from models.multi_asset_grm import MultiAssetGRM
+from models.asset_selection import AssetSelector
+from models.adaptive_windowing import AdaptiveWindowGRM
+from models.robust_estimation import RobustGRM
+
 __all__ = [
     'SyntheticDataGenerator',
     'BaselineARIMA',
@@ -61,9 +71,21 @@ __all__ = [
     'quick_compare',
     'RegimeAnalyzer',
     'analyze_regime_diversity',
-    'recommend_dbscan_params'
+    'recommend_dbscan_params',
+    # Advanced Roadmap (FAZ 1-5)
+    'StatisticalPowerAnalyzer',
+    'quick_power_check',
+    'RegimeMarkovAnalyzer',
+    'analyze_regime_coverage',
+    'DBSCANOptimizer',
+    'auto_tune_dbscan',
+    'GRMFeatureEngineer',
+    'MultiAssetGRM',
+    'AssetSelector',
+    'AdaptiveWindowGRM',
+    'RobustGRM'
 ]
 
-__version__ = '3.1.0'  # Enhanced version
+__version__ = '4.0.0'  # Advanced Roadmap Implementation (FAZ 1-5)
 __author__ = 'GRM Project Team'
 

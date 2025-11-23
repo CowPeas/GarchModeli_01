@@ -5,13 +5,13 @@ Bu modül, gerçek veri testleri için gerekli tüm parametreleri içerir.
 PEP8 ve PEP257 standartlarına uygun olarak hazırlanmıştır.
 """
 
-# Gercek veri parametreleri (FAZE 3 - YENI)
+# Gercek veri parametreleri (FAZE 3 - ENHANCED)
 REAL_DATA_CONFIG = {
     'ticker': 'BTC-USD',         # Ticker: 'BTC-USD', 'ETH-USD', '^GSPC', '^DJI', 'AAPL'
     'asset': 'BTC-USD',          # Varlik (uyumluluk icin)
-    'start_date': '2023-11-10',  # Baslangic tarihi (YYYY-MM-DD)
+    'start_date': '2018-01-01',  # Baslangic tarihi (YYYY-MM-DD) - 5 YIL!
     'end_date': '2025-11-09',    # Bitis tarihi (YYYY-MM-DD)
-    'period': '2y',              # Periyot: '6mo', '1y', '2y', '5y'
+    'period': '5y',              # Periyot: '6mo', '1y', '2y', '5y' - EXTENDED!
     'use_returns': True,         # Getiri kullan (fiyat yerine)
     'detect_volatility': True    # Volatilite analizi yap
 }
@@ -26,11 +26,11 @@ AVAILABLE_ASSETS = {
     'GC=F': 'Gold Futures'
 }
 
-# Veri bölme parametreleri (FAZE 3)
+# Veri bölme parametreleri (FAZE 3 - OPTIMIZED FOR REGIME COVERAGE)
 SPLIT_CONFIG = {
-    'train_ratio': 0.7,          # Daha fazla eğitim (gerçek veri için)
+    'train_ratio': 0.50,         # 0.70 → 0.50 (daha fazla test için)
     'val_ratio': 0.15,           # Doğrulama
-    'test_ratio': 0.15           # Test
+    'test_ratio': 0.35           # 0.15 → 0.35 (CRITICAL! Rejim coverage için)
 }
 
 # ARIMA model parametreleri (optimize edilmiş)
@@ -149,6 +149,22 @@ REGIME_CONFIG = {
     'dbscan_eps': 0.5,
     'dbscan_min_samples': 5,
     'auto_tune_dbscan': True  # Otomatik parametre ayarlama
+}
+
+# Markov analysis config (YENİ - FAZ 1)
+MARKOV_ANALYSIS_CONFIG = {
+    'enable': True,
+    'coverage_confidence': 0.95,      # %95 güvenle tüm rejimleri örneklemek
+    'min_regime_samples': 20,         # Her rejimde en az 20 gözlem
+    'auto_adjust_split': True         # T_min'e göre otomatik split ayarlama
+}
+
+# Power analysis config (YENİ - FAZ 1)
+POWER_ANALYSIS_CONFIG = {
+    'enable': True,
+    'target_power': 0.80,             # Hedef statistical power
+    'alpha': 0.05,                    # Significance level
+    'report_scenarios': True          # Farklı senaryolar için rapor
 }
 
 # Risk metrikleri (FAZE 3 - YENİ)
