@@ -1,16 +1,21 @@
 """
 Time-Series Cross-Validation Modülü - GRM Modeli için Sağlamlık Testi.
 
-Bu modül, zaman serisi modellerini rolling window validation ile
-değerlendirir.
+Bu modül, zaman serisi modellerini rolling window validation,
+expanding window ve blocked cross-validation ile değerlendirir.
 
 FAZE 4: ZENGİNLEŞTİRME
+GÜNCELLEMELER:
+- Gelişmiş CV stratejileri (expanding, blocked, rolling)
+- Bootstrap CI entegrasyonu
+- Çoklu model karşılaştırma
 """
 
 import numpy as np
 import pandas as pd
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, Callable
 import warnings
+from tqdm import tqdm
 
 warnings.filterwarnings('ignore', category=FutureWarning)
 warnings.filterwarnings('ignore', category=DeprecationWarning)

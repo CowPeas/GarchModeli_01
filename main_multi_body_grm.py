@@ -36,11 +36,17 @@ from models import (
 )
 from models.multi_body_grm import MultiBodyGRM
 from models.metrics import calculate_rmse, calculate_mae
+from models.statistical_tests import StatisticalTests
+from models.advanced_metrics import AdvancedMetrics, BootstrapCI
+from models.comprehensive_comparison import ComprehensiveComparison
+from models.regime_analysis import RegimeAnalyzer, analyze_regime_diversity
 from config_phase3 import (
     REAL_DATA_CONFIG,
     SPLIT_CONFIG,
     OUTPUT_PATHS,
-    SCHWARZSCHILD_CONFIG
+    SCHWARZSCHILD_CONFIG,
+    STATISTICAL_TEST_CONFIG,
+    REGIME_CONFIG
 )
 
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -393,12 +399,159 @@ def run_multi_body_grm_test():
     
     logger.info(f"[OK] Multi-Body GRM RMSE: {multi_body_rmse:.6f}\n")
     
-    # Rejim analizi
-    unique_regimes, regime_counts = np.unique(regime_ids, return_counts=True)
-    logger.info("Rejim Dağılımı:")
-    for regime_id, count in zip(unique_regimes, regime_counts):
-        logger.info(f"  Rejim {regime_id}: {count} gözlem (%{count/len(regime_ids)*100:.1f})")
-    logger.info("")
+    # ========================================================================
+    # ADIM 6: GELİŞMİŞ ANALİZLER (YENİ)
+    # ========================================================================
+    logger.info("[ADIM 6] GELİŞMİŞ İSTATİSTİKSEL ANALİZLER")
+    logger.info("-" * 80)
+    
+    # 6.1 Rejim Analizi (Detaylı)
+    logger.info("\n[6.1] DETAYLI REJİM ANALİZİ")
+    logger.info("-" * 80)
+    
+    if REGIME_CONFIG['enable_regime_analysis']:
+        regime_analyzer = RegimeAnalyzer()
+        regime_analyzer.fit(test_df['y'].values, regime_ids)
+        
+        regime_summary = regime_analyzer.get_regime_summary()
+        logger.info("\nRejim Özellikleri:")
+        logger.info(regime_summary.to_string(index=False))
+        
+        # Rejim geçişleri
+        transitions = regime_analyzer.get_regime_transitions()
+        logger.info("\nRejim Geçişleri (Top 5):")
+        sorted_transitions = sorted(transitions.items(), key=lambda x: x[1], reverse=True)[:5]
+        for trans, count in sorted_transitions:
+            logger.info(f"  {trans}: {count} kez")
+        
+        # Dataset karakterizasyonu
+        dataset_char = regime_analyzer.characterize_dataset()
+        logger.info(f"\nToplam Rejim Sayısı: {dataset_char['n_regimes']}")
+        logger.info(f"Outlier Oranı: {dataset_char['outlier_ratio']*100:.1f}%")
+        logger.info(f"Dominant Rejim: {dataset_char['dominant_regime']}")
+        
+        # Rejim analiz raporunu kaydet
+        regime_report_file = os.path.join(OUTPUT_PATHS['results'], 'regime_analysis_report.txt')
+        regime_analyzer.generate_report(output_file=regime_report_file)
+        logger.info(f"\n[OK] Rejim analizi raporu kaydedildi: {regime_report_file}")
+    
+    # 6.2 İstatistiksel Anlamlılık Testleri
+    logger.info("\n[6.2] İSTATİSTİKSEL ANLAMLILIK TESTLERİ")
+    logger.info("-" * 80)
+    
+    # Hata serileri
+    manual_errors = test_df['y'].values - manual_predictions
+    multi_body_errors = test_df['y'].values - multi_body_predictions
+    
+    # Temizlik
+    mask = ~(np.isnan(manual_errors) | np.isnan(multi_body_errors) | 
+             np.isinf(manual_errors) | np.isinf(multi_body_errors))
+    manual_errors_clean = manual_errors[mask]
+    multi_body_errors_clean = multi_body_errors[mask]
+    
+    # Diebold-Mariano Test
+    try:
+        dm_stat, dm_pval = StatisticalTests.diebold_mariano_test(
+            manual_errors_clean,
+            multi_body_errors_clean,
+            alternative=STATISTICAL_TEST_CONFIG['diebold_mariano_alternative']
+        )
+        logger.info(f"\nDiebold-Mariano Test:")
+        logger.info(f"  Test İstatistiği: {dm_stat:.4f}")
+        logger.info(f"  P-Değeri: {dm_pval:.4f}")
+        if dm_pval < STATISTICAL_TEST_CONFIG['significance_level']:
+            logger.info(f"  ✅ Multi-Body GRM, Manuel modelden İSTATİSTİKSEL OLARAK ANLAMLI şekilde farklı (α={STATISTICAL_TEST_CONFIG['significance_level']})")
+        else:
+            logger.info(f"  ⚠️  İki model arasında istatistiksel olarak ANLAMLI fark YOK (α={STATISTICAL_TEST_CONFIG['significance_level']})")
+    except Exception as e:
+        logger.warning(f"  Diebold-Mariano test hatası: {str(e)}")
+    
+    # ARCH-LM Test (Multi-Body residuals)
+    try:
+        arch_lm, arch_pval = StatisticalTests.arch_lm_test(
+            multi_body_errors_clean,
+            lags=STATISTICAL_TEST_CONFIG['arch_lm_lags']
+        )
+        logger.info(f"\nARCH-LM Test (Multi-Body Residuals):")
+        logger.info(f"  LM İstatistiği: {arch_lm:.4f}")
+        logger.info(f"  P-Değeri: {arch_pval:.4f}")
+        if arch_pval < STATISTICAL_TEST_CONFIG['significance_level']:
+            logger.info(f"  ⚠️  ARCH etkileri tespit edildi (heteroskedasticity var)")
+        else:
+            logger.info(f"  ✅ ARCH etkileri tespit EDİLEMEDİ (homoskedastic)")
+    except Exception as e:
+        logger.warning(f"  ARCH-LM test hatası: {str(e)}")
+    
+    # Ljung-Box Test (Multi-Body residuals)
+    try:
+        lb_stats, lb_pvals = StatisticalTests.ljung_box_test(
+            multi_body_errors_clean,
+            lags=STATISTICAL_TEST_CONFIG['ljung_box_lags']
+        )
+        logger.info(f"\nLjung-Box Test (Multi-Body Residuals, Lag {STATISTICAL_TEST_CONFIG['ljung_box_lags']}):")
+        logger.info(f"  LB İstatistiği: {lb_stats[-1]:.4f}")
+        logger.info(f"  P-Değeri: {lb_pvals[-1]:.4f}")
+        if lb_pvals[-1] < STATISTICAL_TEST_CONFIG['significance_level']:
+            logger.info(f"  ⚠️  Otokorelasyon tespit edildi (beyaz gürültü DEĞİL)")
+        else:
+            logger.info(f"  ✅ Otokorelasyon tespit EDİLEMEDİ (beyaz gürültü)")
+    except Exception as e:
+        logger.warning(f"  Ljung-Box test hatası: {str(e)}")
+    
+    # 6.3 Bootstrap Güven Aralıkları
+    logger.info("\n[6.3] BOOTSTRAP GÜVEN ARALIKLARI")
+    logger.info("-" * 80)
+    
+    try:
+        boot = BootstrapCI(
+            n_bootstrap=STATISTICAL_TEST_CONFIG['bootstrap_n_iterations'],
+            confidence_level=STATISTICAL_TEST_CONFIG['bootstrap_confidence_level']
+        )
+        
+        # RMSE farkı CI
+        ci_result = boot.performance_difference_ci(
+            test_df['y'].values[mask],
+            manual_predictions[mask],
+            multi_body_predictions[mask],
+            metric='rmse'
+        )
+        
+        logger.info(f"\nRMSE Farkı (Manuel - Multi-Body):")
+        logger.info(f"  Ortalama Fark: {ci_result['mean_difference']:.6f}")
+        logger.info(f"  %{STATISTICAL_TEST_CONFIG['bootstrap_confidence_level']*100:.0f} CI: [{ci_result['ci_lower']:.6f}, {ci_result['ci_upper']:.6f}]")
+        logger.info(f"  İstatistiksel Anlamlı: {'Evet' if ci_result['is_significant'] else 'Hayır'}")
+        logger.info(f"\n  Yorum: {ci_result['interpretation']}")
+    except Exception as e:
+        logger.warning(f"  Bootstrap CI hesaplama hatası: {str(e)}")
+    
+    # 6.4 Gelişmiş Metrikler
+    logger.info("\n[6.4] GELİŞMİŞ PERFORMANS METRİKLERİ")
+    logger.info("-" * 80)
+    
+    try:
+        # Manuel model metrikleri
+        manual_metrics = AdvancedMetrics.calculate_all_metrics(
+            test_df['y'].values[mask],
+            manual_predictions[mask]
+        )
+        
+        # Multi-Body metrikleri
+        multi_body_metrics = AdvancedMetrics.calculate_all_metrics(
+            test_df['y'].values[mask],
+            multi_body_predictions[mask]
+        )
+        
+        logger.info("\nManuel GRM:")
+        for key, value in manual_metrics.items():
+            logger.info(f"  {key}: {value:.6f}")
+        
+        logger.info("\nMulti-Body GRM:")
+        for key, value in multi_body_metrics.items():
+            logger.info(f"  {key}: {value:.6f}")
+    except Exception as e:
+        logger.warning(f"  Gelişmiş metrikler hatası: {str(e)}")
+    
+    logger.info("\n" + "=" * 80)
     
     # Karşılaştırma
     improvement = (manual_rmse - multi_body_rmse) / manual_rmse * 100
@@ -411,20 +564,59 @@ def run_multi_body_grm_test():
     logger.info(f"İyileşme:              {improvement:+.2f}%")
     logger.info("=" * 80 + "\n")
     
-    # Sonuçları kaydet
+    # ========================================================================
+    # ADIM 7: KAPSAMLI RAPOR OLUŞTURMA
+    # ========================================================================
+    logger.info("[ADIM 7] KAPSAMLI RAPOR OLUŞTURMA")
+    logger.info("-" * 80)
+    
+    # Comprehensive Comparison kullanarak detaylı rapor
+    comp = ComprehensiveComparison(baseline_name='Manuel_GRM')
+    
+    # Model sonuçlarını ekle
+    comp.add_model_results('Manuel_GRM', test_df['y'].values, manual_predictions)
+    comp.add_model_results('Multi_Body_GRM', test_df['y'].values, multi_body_predictions)
+    
+    # Comprehensive rapor oluştur
+    comprehensive_report_file = os.path.join(OUTPUT_PATHS['results'], 'comprehensive_comparison_report.txt')
+    comp.generate_comprehensive_report(output_file=comprehensive_report_file)
+    logger.info(f"[OK] Kapsamlı karşılaştırma raporu kaydedildi: {comprehensive_report_file}\n")
+    
+    # Sonuçları kaydet (eski format)
     results_file = os.path.join(OUTPUT_PATHS['results'], 'multi_body_grm_results.txt')
     with open(results_file, 'w', encoding='utf-8') as f:
         f.write("=" * 80 + "\n")
-        f.write("MULTI-BODY GRM TEST SONUÇLARI\n")
+        f.write("MULTI-BODY GRM TEST SONUÇLARI - ENHANCED\n")
         f.write("=" * 80 + "\n\n")
         f.write(f"Tarih: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
         f.write("PERFORMANS KARŞILAŞTIRMASI:\n")
         f.write(f"  Manuel Fonksiyon RMSE: {manual_rmse:.6f}\n")
         f.write(f"  Multi-Body GRM RMSE:   {multi_body_rmse:.6f}\n")
         f.write(f"  İyileşme:              {improvement:+.2f}%\n\n")
+        
+        # İstatistiksel testler
+        f.write("İSTATİSTİKSEL ANLAMLILIK:\n")
+        try:
+            f.write(f"  Diebold-Mariano p-değeri: {dm_pval:.4f}\n")
+            f.write(f"  İstatistiksel Anlamlı: {'Evet' if dm_pval < STATISTICAL_TEST_CONFIG['significance_level'] else 'Hayır'}\n\n")
+        except:
+            f.write("  Diebold-Mariano testi hesaplanamadı\n\n")
+        
+        # Bootstrap CI
+        try:
+            f.write("BOOTSTRAP GÜVEN ARALIKLARI:\n")
+            f.write(f"  RMSE Farkı: {ci_result['mean_difference']:.6f}\n")
+            f.write(f"  %{STATISTICAL_TEST_CONFIG['bootstrap_confidence_level']*100:.0f} CI: [{ci_result['ci_lower']:.6f}, {ci_result['ci_upper']:.6f}]\n")
+            f.write(f"  Anlamlı: {'Evet' if ci_result['is_significant'] else 'Hayır'}\n\n")
+        except:
+            f.write("  Bootstrap CI hesaplanamadı\n\n")
+        
         f.write("REJİM ANALİZİ:\n")
+        unique_regimes, regime_counts = np.unique(regime_ids, return_counts=True)
         for regime_id, count in zip(unique_regimes, regime_counts):
             f.write(f"  Rejim {regime_id}: {count} gözlem (%{count/len(regime_ids)*100:.1f})\n")
+        
         f.write("\nBODY PARAMETRELERİ:\n")
         for params in multi_body_model.body_params:
             beta_str = f"{params['beta']:.4f}" if params['beta'] else "N/A"
@@ -432,6 +624,22 @@ def run_multi_body_grm_test():
                    f"α={params['alpha']:.4f}, "
                    f"β={beta_str}, "
                    f"n={params['n_samples']}\n")
+        
+        # Gelişmiş metrikler
+        f.write("\nGELİŞMİŞ METRİKLER:\n")
+        f.write("Manuel GRM:\n")
+        try:
+            for key, value in manual_metrics.items():
+                f.write(f"  {key}: {value:.6f}\n")
+        except:
+            f.write("  Hesaplanamadı\n")
+        
+        f.write("\nMulti-Body GRM:\n")
+        try:
+            for key, value in multi_body_metrics.items():
+                f.write(f"  {key}: {value:.6f}\n")
+        except:
+            f.write("  Hesaplanamadı\n")
     
     logger.info(f"[OK] Sonuçlar kaydedildi: {results_file}\n")
     

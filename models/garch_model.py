@@ -1,180 +1,203 @@
 """
-GARCH model modülü.
+GARCH model implementasyonu.
 
-Bu modül, GARCH/EGARCH gibi volatilite modellerini içerir ve
-GRM modelleriyle karşılaştırma için benchmark sağlar.
+Bu modül, ARCH kütüphanesini kullanarak GARCH, EGARCH ve GJR-GARCH
+modellerini eğitir ve tahmin yapar.
 """
 
 import numpy as np
 import pandas as pd
-from typing import Tuple, Optional, Dict
 import warnings
+from typing import Dict, Tuple, Optional
+from arch import arch_model
 
 
 class GARCHModel:
     """
-    GARCH(p,q) model sınıfı.
+    GARCH ailesi modelleri için wrapper sınıfı.
     
-    Bu sınıf, GARCH ailesi volatilite modellerini uygular ve
-    GRM modelleriyle karşılaştırma için kullanılır.
+    Bu sınıf, volatilite modellemesi için GARCH, EGARCH ve GJR-GARCH
+    modellerini destekler.
     
     Attributes
     ----------
+    model_type : str
+        Model tipi ('GARCH', 'EGARCH', 'GJR-GARCH')
     p : int
         ARCH sırası
     q : int
         GARCH sırası
-    model_type : str
-        Model tipi: 'GARCH', 'EGARCH', 'GJR-GARCH'
+    mean_model : str
+        Ortalama model tipi
+    fitted_model : arch.univariate.base.ARCHModelResult
+        Eğitilmiş model
     """
     
     def __init__(
         self,
+        model_type: str = 'GARCH',
         p: int = 1,
         q: int = 1,
-        model_type: str = 'GARCH'
+        mean_model: str = 'Constant'
     ):
         """
-        GARCHModel sınıfını başlatır.
+        GARCH model parametreleri.
         
         Parameters
         ----------
+        model_type : str, optional
+            Model tipi: 'GARCH', 'EGARCH', 'GJR-GARCH' (varsayılan: 'GARCH')
         p : int, optional
             ARCH sırası (varsayılan: 1)
         q : int, optional
             GARCH sırası (varsayılan: 1)
-        model_type : str, optional
-            Model tipi (varsayılan: 'GARCH')
+        mean_model : str, optional
+            Ortalama model: 'Constant', 'Zero', 'AR' (varsayılan: 'Constant')
         """
+        self.model_type = model_type
         self.p = p
         self.q = q
-        self.model_type = model_type
+        self.mean_model = mean_model
         self.fitted_model = None
-        self.mean_model = None
+        self.data = None
     
-    def fit(
-        self,
-        data: pd.Series,
-        mean_model: str = 'AR',
-        ar_lags: int = 1,
-        verbose: bool = True
-    ):
+    def fit(self, data: pd.Series, verbose: bool = False) -> 'GARCHModel':
         """
-        GARCH modelini eğitir.
+        GARCH modelini eğit.
         
         Parameters
         ----------
         data : pd.Series
-            Getiri serisi
-        mean_model : str, optional
-            Ortalama model: 'Constant', 'Zero', 'AR', 'ARX'
-            (varsayılan: 'AR')
-        ar_lags : int, optional
-            AR modeli için gecikme sayısı (varsayılan: 1)
+            Eğitim verisi (getiri serisi)
         verbose : bool, optional
-            Çıktı göster (varsayılan: True)
-        """
-        try:
-            from arch import arch_model
-        except ImportError:
-            raise ImportError(
-                "arch kütüphanesi yüklü değil. "
-                "Lütfen 'pip install arch' komutunu çalıştırın."
-            )
-        
-        warnings.filterwarnings('ignore')
-        
-        if verbose:
-            print(f"\n🔧 GARCH({self.p},{self.q}) Modeli Eğitiliyor...")
-            print(f"   Ortalama model: {mean_model}")
-            if mean_model == 'AR':
-                print(f"   AR gecikmeleri: {ar_lags}")
-        
-        # GARCH modeli oluştur
-        try:
-            if mean_model == 'AR':
-                self.mean_model = arch_model(
-                    data * 100,  # Ölçeklendirme (daha iyi convergence)
-                    mean=mean_model,
-                    lags=ar_lags,
-                    vol=self.model_type,
-                    p=self.p,
-                    q=self.q
-                )
-            else:
-                self.mean_model = arch_model(
-                    data * 100,
-                    mean=mean_model,
-                    vol=self.model_type,
-                    p=self.p,
-                    q=self.q
-                )
+            Eğitim çıktısını göster (varsayılan: False)
             
-            # Model eğitimi
-            self.fitted_model = self.mean_model.fit(disp='off', show_warning=False)
+        Returns
+        -------
+        GARCHModel
+            Eğitilmiş model (self)
+        """
+        self.data = data
+        
+        # Model tipi mapping
+        vol_map = {
+            'GARCH': 'Garch',
+            'EGARCH': 'EGARCH',
+            'GJR-GARCH': 'GJRGARCH'
+        }
+        
+        vol_model = vol_map.get(self.model_type, 'Garch')
+        
+        # Model oluştur
+        try:
+            # Veriyi ölçeklendir (numerical stability için)
+            scaled_data = data * 100
+            
+            model = arch_model(
+                scaled_data,
+                mean=self.mean_model,
+                vol=vol_model,
+                p=self.p,
+                q=self.q,
+                rescale=False
+            )
+            
+            # Eğit
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore')
+                self.fitted_model = model.fit(
+                    disp='off' if not verbose else 'final',
+                    show_warning=False
+                )
             
             if verbose:
-                print(f"✓ Model eğitimi tamamlandı")
-                print(f"  - Log Likelihood: {self.fitted_model.loglikelihood:.2f}")
-                print(f"  - AIC: {self.fitted_model.aic:.2f}")
-                print(f"  - BIC: {self.fitted_model.bic:.2f}")
-        
+                print(f"[OK] {self.model_type}({self.p},{self.q}) eğitildi")
+            
         except Exception as e:
-            print(f"⚠️ GARCH eğitimi başarısız: {str(e)}")
-            print(f"   Basit volatilite modeli kullanılıyor...")
-            self.fitted_model = None
+            print(f"[HATA] GARCH eğitimi başarısız: {str(e)}")
+            # Fallback: Basit GARCH(1,1)
+            model = arch_model(
+                data * 100,
+                mean='Constant',
+                vol='Garch',
+                p=1,
+                q=1
+            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore')
+                self.fitted_model = model.fit(disp='off', show_warning=False)
         
-        warnings.filterwarnings('default')
+        return self
     
     def predict(
         self,
-        steps: int = 1,
+        horizon: int = 1,
         method: str = 'analytic'
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> np.ndarray:
         """
-        Gelecek değerleri tahmin eder.
+        Volatilite tahmini yap.
         
         Parameters
         ----------
-        steps : int, optional
-            Kaç adım ileriye tahmin (varsayılan: 1)
+        horizon : int, optional
+            Tahmin ufku (varsayılan: 1)
         method : str, optional
-            Tahmin yöntemi: 'analytic' veya 'simulation'
-            (varsayılan: 'analytic')
-        
-        Returns
-        -------
-        Tuple[np.ndarray, np.ndarray]
-            Ortalama tahminler ve volatilite tahminleri
-        """
-        if self.fitted_model is None:
-            raise ValueError("Model henüz eğitilmemiş. Önce fit() çağırın.")
-        
-        forecast = self.fitted_model.forecast(horizon=steps, method=method)
-        
-        # Ortalama ve volatilite tahminleri
-        mean_forecast = forecast.mean.values[-1, :] / 100  # Ölçeği geri döndür
-        variance_forecast = forecast.variance.values[-1, :] / 10000
-        
-        return mean_forecast, np.sqrt(variance_forecast)
-    
-    def get_conditional_volatility(self) -> np.ndarray:
-        """
-        Koşullu volatilite serisini döndürür.
-        
+            Tahmin metodu: 'analytic', 'simulation' (varsayılan: 'analytic')
+            
         Returns
         -------
         np.ndarray
-            Koşullu volatilite σ(t)
+            Tahmin edilen volatilite
         """
         if self.fitted_model is None:
-            raise ValueError("Model henüz eğitilmemiş. Önce fit() çağırın.")
+            raise ValueError("Model eğitilmemiş. Önce fit() çağırın.")
         
-        return self.fitted_model.conditional_volatility.values / 100
+        try:
+            forecast = self.fitted_model.forecast(
+                horizon=horizon,
+                method=method,
+                reindex=False
+            )
+            
+            # Variance'ı std'ye çevir ve ölçeği düzelt
+            variance = forecast.variance.values[-1, :]
+            volatility = np.sqrt(variance) / 100  # Ölçeği geri al
+            
+            return volatility
+            
+        except Exception as e:
+            print(f"[UYARI] GARCH tahmin hatası: {str(e)}")
+            # Fallback: Son volatilite
+            return np.array([self.fitted_model.conditional_volatility[-1] / 100])
     
-    def get_standardized_residuals(self) -> np.ndarray:
+    def forecast_mean(self, horizon: int = 1) -> np.ndarray:
         """
-        Standardize edilmiş artıkları döndürür.
+        Ortalama (getiri) tahmini.
+        
+        Parameters
+        ----------
+        horizon : int, optional
+            Tahmin ufku (varsayılan: 1)
+            
+        Returns
+        -------
+        np.ndarray
+            Tahmin edilen getiri
+        """
+        if self.fitted_model is None:
+            raise ValueError("Model eğitilmemiş. Önce fit() çağırın.")
+        
+        try:
+            forecast = self.fitted_model.forecast(horizon=horizon, reindex=False)
+            mean_forecast = forecast.mean.values[-1, :] / 100  # Ölçeği geri al
+            return mean_forecast
+        except Exception as e:
+            print(f"[UYARI] Mean forecast hatası: {str(e)}")
+            return np.zeros(horizon)
+    
+    def get_residuals(self) -> np.ndarray:
+        """
+        Standardize artıkları döndür.
         
         Returns
         -------
@@ -182,116 +205,180 @@ class GARCHModel:
             Standardize artıklar
         """
         if self.fitted_model is None:
-            raise ValueError("Model henüz eğitilmemiş. Önce fit() çağırın.")
+            raise ValueError("Model eğitilmemiş. Önce fit() çağırın.")
         
-        return self.fitted_model.std_resid.values
+        return self.fitted_model.std_resid
     
-    def get_diagnostics(self) -> Dict[str, any]:
+    def get_volatility(self) -> np.ndarray:
         """
-        Model tanısal bilgilerini döndürür.
-        
-        Returns
-        -------
-        Dict[str, any]
-            Tanısal bilgiler
-        """
-        if self.fitted_model is None:
-            return {
-                'model_type': self.model_type,
-                'p': self.p,
-                'q': self.q,
-                'fitted': False
-            }
-        
-        diagnostics = {
-            'model_type': self.model_type,
-            'p': self.p,
-            'q': self.q,
-            'fitted': True,
-            'loglikelihood': self.fitted_model.loglikelihood,
-            'aic': self.fitted_model.aic,
-            'bic': self.fitted_model.bic,
-            'num_params': self.fitted_model.num_params,
-            'mean_conditional_vol': self.get_conditional_volatility().mean(),
-            'max_conditional_vol': self.get_conditional_volatility().max()
-        }
-        
-        return diagnostics
-
-
-class SimpleVolatilityModel:
-    """
-    Basit volatilite modeli (GARCH yoksa fallback).
-    
-    Bu sınıf, GARCH kurulamamışsa kullanılmak üzere
-    basit hareketli volatilite modeli sağlar.
-    """
-    
-    def __init__(self, window: int = 20):
-        """
-        SimpleVolatilityModel sınıfını başlatır.
-        
-        Parameters
-        ----------
-        window : int, optional
-            Hareketli pencere boyutu (varsayılan: 20)
-        """
-        self.window = window
-        self.volatility = None
-    
-    def fit(self, data: pd.Series):
-        """
-        Basit volatilite modelini eğitir.
-        
-        Parameters
-        ----------
-        data : pd.Series
-            Getiri serisi
-        """
-        self.volatility = data.rolling(window=self.window).std()
-        self.volatility = self.volatility.fillna(self.volatility.mean())
-    
-    def predict(self, steps: int = 1) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Basit tahmin (son volatiliteyi kullan).
-        
-        Parameters
-        ----------
-        steps : int, optional
-            Kaç adım ileriye (varsayılan: 1)
-        
-        Returns
-        -------
-        Tuple[np.ndarray, np.ndarray]
-            Sıfır ortalama ve son volatilite
-        """
-        last_vol = self.volatility.iloc[-1]
-        return np.zeros(steps), np.full(steps, last_vol)
-    
-    def get_conditional_volatility(self) -> np.ndarray:
-        """
-        Hareketli volatilite serisini döndürür.
+        Conditional volatility serisini döndür.
         
         Returns
         -------
         np.ndarray
-            Volatilite serisi
+            Conditional volatility (ölçeklendirilmiş)
         """
-        return self.volatility.values
+        if self.fitted_model is None:
+            raise ValueError("Model eğitilmemiş. Önce fit() çağırın.")
+        
+        return self.fitted_model.conditional_volatility / 100
     
-    def get_diagnostics(self) -> Dict[str, any]:
+    def get_parameters(self) -> Dict[str, float]:
         """
-        Basit model tanısal bilgileri.
+        Model parametrelerini döndür.
         
         Returns
         -------
-        Dict[str, any]
-            Tanısal bilgiler
+        Dict[str, float]
+            Model parametreleri
         """
+        if self.fitted_model is None:
+            raise ValueError("Model eğitilmemiş. Önce fit() çağırın.")
+        
+        params = self.fitted_model.params.to_dict()
+        return params
+    
+    def grid_search(
+        self,
+        train_data: pd.Series,
+        val_data: pd.Series,
+        p_range: list = [1, 2],
+        q_range: list = [1, 2],
+        verbose: bool = False
+    ) -> Tuple[int, int]:
+        """
+        Grid search ile optimal (p, q) parametrelerini bul.
+        
+        Parameters
+        ----------
+        train_data : pd.Series
+            Eğitim verisi
+        val_data : pd.Series
+            Doğrulama verisi
+        p_range : list, optional
+            Test edilecek p değerleri (varsayılan: [1, 2])
+        q_range : list, optional
+            Test edilecek q değerleri (varsayılan: [1, 2])
+        verbose : bool, optional
+            İlerlemeyi göster (varsayılan: False)
+            
+        Returns
+        -------
+        Tuple[int, int]
+            Optimal (p, q) parametreleri
+        """
+        best_aic = np.inf
+        best_p, best_q = 1, 1
+        
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore')
+            
+            for p in p_range:
+                for q in q_range:
+                    try:
+                        # Model oluştur ve eğit
+                        model = arch_model(
+                            train_data * 100,
+                            mean=self.mean_model,
+                            vol='Garch',
+                            p=p,
+                            q=q
+                        )
+                        result = model.fit(disp='off', show_warning=False)
+                        
+                        # AIC ile karşılaştır
+                        if result.aic < best_aic:
+                            best_aic = result.aic
+                            best_p, best_q = p, q
+                        
+                        if verbose:
+                            print(f"GARCH({p},{q}): AIC = {result.aic:.2f}")
+                    
+                    except Exception:
+                        continue
+        
+        if verbose:
+            print(f"\n[OK] En iyi parametreler: GARCH({best_p},{best_q})")
+        
+        return best_p, best_q
+    
+    def get_info_criteria(self) -> Dict[str, float]:
+        """
+        Model bilgi kriterlerini döndür.
+        
+        Returns
+        -------
+        Dict[str, float]
+            AIC, BIC değerleri
+        """
+        if self.fitted_model is None:
+            raise ValueError("Model eğitilmemiş. Önce fit() çağırın.")
+        
         return {
-            'model_type': 'Simple Moving Volatility',
-            'window': self.window,
-            'mean_volatility': self.volatility.mean(),
-            'max_volatility': self.volatility.max()
+            'aic': self.fitted_model.aic,
+            'bic': self.fitted_model.bic,
+            'loglikelihood': self.fitted_model.loglikelihood
         }
 
+
+def compare_garch_models(
+    train_data: pd.Series,
+    val_data: pd.Series,
+    model_types: list = None
+) -> pd.DataFrame:
+    """
+    Farklı GARCH modellerini karşılaştır.
+    
+    Parameters
+    ----------
+    train_data : pd.Series
+        Eğitim verisi
+    val_data : pd.Series
+        Doğrulama verisi
+    model_types : list, optional
+        Test edilecek model tipleri (varsayılan: None)
+        
+    Returns
+    -------
+    pd.DataFrame
+        Model karşılaştırma tablosu
+    """
+    if model_types is None:
+        model_types = ['GARCH', 'EGARCH', 'GJR-GARCH']
+    
+    results = []
+    
+    for model_type in model_types:
+        try:
+            # Model eğit
+            model = GARCHModel(model_type=model_type, p=1, q=1)
+            model.fit(train_data, verbose=False)
+            
+            # Val seti üzerinde tahmin
+            # Not: GARCH için one-step-ahead forecasting gerekir
+            val_predictions = []
+            for i in range(len(val_data)):
+                pred = model.predict(horizon=1)[0]
+                val_predictions.append(pred)
+            
+            # RMSE (volatility tahminleri için)
+            # Realized volatility hesapla (rolling window)
+            realized_vol = val_data.rolling(5).std()
+            rmse = np.sqrt(np.mean((realized_vol[5:] - val_predictions[:len(realized_vol)-5])**2))
+            
+            # Info criteria
+            info = model.get_info_criteria()
+            
+            results.append({
+                'Model': model_type,
+                'AIC': info['aic'],
+                'BIC': info['bic'],
+                'LogLik': info['loglikelihood'],
+                'Val_RMSE': rmse
+            })
+        
+        except Exception as e:
+            print(f"[HATA] {model_type} test edilemedi: {str(e)}")
+            continue
+    
+    return pd.DataFrame(results)

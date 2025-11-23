@@ -115,7 +115,7 @@ COMPARISON_CONFIG = {
     'rolling_window_size': 50          # Pencere boyutu
 }
 
-# İstatistiksel test parametreleri (FAZE 3 - YENİ)
+# İstatistiksel test parametreleri (FAZE 3 - YENİ + ENHANCED)
 STATISTICAL_TEST_CONFIG = {
     'significance_level': 0.05,       # Anlamlılık seviyesi
     'diebold_mariano_alternative': 'two-sided',
@@ -123,7 +123,32 @@ STATISTICAL_TEST_CONFIG = {
     'arch_lm_lags': 5,
     'white_noise_test': True,         # Beyaz gürültü testi
     'normality_test': True,           # Normallik testi
-    'stationarity_test': True         # Durağanlık testi
+    'stationarity_test': True,        # Durağanlık testi
+    'bootstrap_n_iterations': 1000,   # Bootstrap iterasyon sayısı
+    'bootstrap_confidence_level': 0.95  # Bootstrap güven seviyesi
+}
+
+# Cross-Validation Parametreleri (YENİ)
+CV_CONFIG = {
+    'method': 'expanding',  # 'expanding', 'walk-forward', 'blocked'
+    'n_splits': 5,
+    'test_size': 100,  # Her fold için test boyutu
+    'gap': 0  # Train-test arası boşluk
+}
+
+# Advanced Metrics Config (YENİ)
+METRICS_CONFIG = {
+    'calculate_financial_metrics': False,  # Finansal metrikler (getiri için)
+    'calculate_volatility_metrics': True,  # Volatilite metrikleri
+    'calculate_directional_accuracy': True  # Yön doğruluğu
+}
+
+# Regime Analysis Config (YENİ)
+REGIME_CONFIG = {
+    'enable_regime_analysis': True,
+    'dbscan_eps': 0.5,
+    'dbscan_min_samples': 5,
+    'auto_tune_dbscan': True  # Otomatik parametre ayarlama
 }
 
 # Risk metrikleri (FAZE 3 - YENİ)
