@@ -207,7 +207,7 @@ class EnhancedMultiBodyGRMRunner:
         
         # Generate report
         report = splitter.generate_report()
-        report_file = os.path.join(OUTPUT_PATHS['results_dir'], 'stratified_split_report.txt')
+        report_file = os.path.join(OUTPUT_PATHS.get('results_dir', 'results'), 'stratified_split_report.txt')
         with open(report_file, 'w', encoding='utf-8') as f:
             f.write(report)
         self.log(f"[OK] Stratified split raporu: {report_file}")
@@ -365,9 +365,9 @@ class EnhancedMultiBodyGRMRunner:
         self.log("-" * 80)
         
         multi_body_grm = MultiBodyGRM(
-            window=SCHWARZSCHILD_CONFIG['window_size'],
-            dbscan_eps=eps,
-            dbscan_min_samples=minpts
+            window_size=SCHWARZSCHILD_CONFIG['window_size'],
+            eps=eps,
+            min_samples=minpts
         )
         
         multi_body_grm.fit(train_residuals)
@@ -406,9 +406,9 @@ class EnhancedMultiBodyGRMRunner:
         train_residuals_final = baseline_final.get_residuals()
         
         multi_body_grm_final = MultiBodyGRM(
-            window=SCHWARZSCHILD_CONFIG['window_size'],
-            dbscan_eps=eps,
-            dbscan_min_samples=minpts
+            window_size=SCHWARZSCHILD_CONFIG['window_size'],
+            eps=eps,
+            min_samples=minpts
         )
         
         multi_body_grm_final.fit(train_residuals_final)
