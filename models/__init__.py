@@ -41,6 +41,10 @@ from models.asset_selection import AssetSelector
 from models.adaptive_windowing import AdaptiveWindowGRM
 from models.robust_estimation import RobustGRM
 
+# ANALYSIS & VALIDATION MODULES (ENHANCED)
+from models.stratified_split import StratifiedTimeSeriesSplit, compare_split_strategies
+from models.regime_coverage_validator import RegimeCoverageValidator, quick_coverage_check
+
 __all__ = [
     'SyntheticDataGenerator',
     'BaselineARIMA',
@@ -83,9 +87,14 @@ __all__ = [
     'MultiAssetGRM',
     'AssetSelector',
     'AdaptiveWindowGRM',
-    'RobustGRM'
+    'RobustGRM',
+    # Enhanced Analysis & Validation
+    'StratifiedTimeSeriesSplit',
+    'compare_split_strategies',
+    'RegimeCoverageValidator',
+    'quick_coverage_check'
 ]
 
-__version__ = '4.0.0'  # Advanced Roadmap Implementation (FAZ 1-5)
+__version__ = '4.1.0'  # Advanced Roadmap + Analysis & Validation (COMPLETE)
 __author__ = 'GRM Project Team'
 
