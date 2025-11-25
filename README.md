@@ -868,7 +868,7 @@ Katkılarınızı bekliyoruz! Lütfen aşağıdaki adımları takip edin:
 
 ## 📝 Lisans
 
-Bu proje MIT Lisansı altında lisanslanmıştır - detaylar için [LICENSE](LICENSE) dosyasına bakın.
+*TR**: Bu proje [GNU GENEL KAMU LİSANSI](LICENSE) altında lisanslanmıştır. Detaylar için LICENSE dosyasını inceleyin. 
 
 ---
 
@@ -887,8 +887,5 @@ Bu proje MIT Lisansı altında lisanslanmıştır - detaylar için [LICENSE](LIC
 - E-posta: [eyup.tp@hotmail.com](mailto:eyup.tp@hotmail.com)
 
 ---
-## 📄 License / Lisans
-**EN**: This project is licensed under the [GNU GENERAL PUBLIC LICENSE](LICENSE). See LICENSE file for details.  
-**TR**: Bu proje [GNU GENEL KAMU LİSANSI](LICENSE) altında lisanslanmıştır. Detaylar için LICENSE dosyasını inceleyin. 
----
+
 
