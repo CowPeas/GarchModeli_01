@@ -265,6 +265,49 @@ class BootstrapCI:
         self.confidence_level = confidence_level
         self.alpha = 1 - confidence_level
     
+    def compute_rmse_ci(
+        self,
+        errors1: np.ndarray,
+        errors2: np.ndarray
+    ) -> tuple:
+        """
+        İki modelin RMSE farkı için bootstrap CI hesapla.
+        
+        Parameters
+        ----------
+        errors1 : np.ndarray
+            Model 1 hataları (baseline)
+        errors2 : np.ndarray
+            Model 2 hataları (proposed)
+            
+        Returns
+        -------
+        tuple
+            (ci_lower, ci_upper) - RMSE farkının CI'sı
+        """
+        n = len(errors1)
+        rmse_diffs = []
+        
+        np.random.seed(42)
+        
+        for _ in range(self.n_bootstrap):
+            idx = np.random.choice(n, n, replace=True)
+            
+            e1_boot = errors1[idx]
+            e2_boot = errors2[idx]
+            
+            rmse1 = np.sqrt(np.mean(e1_boot ** 2))
+            rmse2 = np.sqrt(np.mean(e2_boot ** 2))
+            
+            rmse_diffs.append(rmse1 - rmse2)
+        
+        rmse_diffs = np.array(rmse_diffs)
+        
+        ci_lower = np.percentile(rmse_diffs, self.alpha / 2 * 100)
+        ci_upper = np.percentile(rmse_diffs, (1 - self.alpha / 2) * 100)
+        
+        return float(ci_lower), float(ci_upper)
+    
     def performance_difference_ci(
         self,
         y_true: np.ndarray,

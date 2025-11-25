@@ -443,7 +443,7 @@ class KerrGRM:
                     ))
                     
                     if verbose:
-                        print(f"α={alpha:.2f}, β={beta:.3f}, γ={gamma:.2f} → RMSE={rmse:.4f}")
+                        print(f"alpha={alpha:.2f}, beta={beta:.3f}, gamma={gamma:.2f} -> RMSE={rmse:.4f}")
                     
                     if rmse < best_rmse:
                         best_rmse = rmse
@@ -459,9 +459,9 @@ class KerrGRM:
         
         if verbose:
             print("-" * 60)
-            print(f"✓ En iyi parametreler: α={best_alpha:.2f}, "
-                  f"β={best_beta:.3f}, γ={best_gamma:.2f}, RMSE={best_rmse:.4f}")
-            print(f"✓ Tespit edilen rejim: {detected_regime}\n")
+            print(f"[OK] En iyi parametreler: alpha={best_alpha:.2f}, "
+                  f"beta={best_beta:.3f}, gamma={best_gamma:.2f}, RMSE={best_rmse:.4f}")
+            print(f"[OK] Tespit edilen rejim: {detected_regime}\n")
         
         return best_alpha, best_beta, best_gamma
     

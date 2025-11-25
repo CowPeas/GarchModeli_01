@@ -47,6 +47,8 @@ class MultiBodyGRM:
     def __init__(
         self,
         window_size: int = 20,
+        alpha: float = 1.0,
+        beta: float = 0.05,
         eps: float = 0.5,
         min_samples: int = 10,
         use_decay: bool = True
@@ -58,6 +60,10 @@ class MultiBodyGRM:
         ----------
         window_size : int, optional
             Pencere boyutu (varsayılan: 20)
+        alpha : float, optional
+            Kütleçekimsel etkileşim katsayısı (varsayılan: 1.0)
+        beta : float, optional
+            Sönümleme hızı parametresi (varsayılan: 0.05)
         eps : float, optional
             DBSCAN eps parametresi (varsayılan: 0.5)
         min_samples : int, optional
@@ -66,6 +72,8 @@ class MultiBodyGRM:
             Decay factor kullan (varsayılan: True)
         """
         self.window_size = window_size
+        self.alpha = alpha
+        self.beta = beta
         self.eps = eps
         self.min_samples = min_samples
         self.use_decay = use_decay
@@ -200,6 +208,8 @@ class MultiBodyGRM:
             # Her rejim için ayrı GRM fit
             grm = SchwarzschildGRM(
                 window_size=self.window_size,
+                alpha=self.alpha,
+                beta=self.beta,
                 use_decay=self.use_decay
             )
             grm.fit(regime_residuals)
@@ -213,8 +223,8 @@ class MultiBodyGRM:
             })
             
             beta_str = f"{grm.beta:.4f}" if self.use_decay else "N/A"
-            print(f"  Rejim {regime_id}: α={grm.alpha:.4f}, "
-                  f"β={beta_str}, "
+            print(f"  Rejim {regime_id}: alpha={grm.alpha:.4f}, "
+                  f"beta={beta_str}, "
                   f"n={len(regime_residuals)}")
         
         print(f"[MultiBodyGRM] {len(self.body_params)} body eğitildi\n")
@@ -344,11 +354,12 @@ class MultiBodyGRM:
                 weight = 0.1
             
             # Bu body'nin katkısı
-            mass_arr = grm_model.compute_mass(recent_residuals)
-            if len(mass_arr) == 0:
-                continue
+            # Directly compute mass (variance) from recent window
+            if len(recent_residuals) > 1:
+                mass = np.var(recent_residuals)
+            else:
+                mass = 0.0
                 
-            mass = mass_arr[-1]
             last_residual = recent_residuals[-1]
             
             # NaN kontrolü

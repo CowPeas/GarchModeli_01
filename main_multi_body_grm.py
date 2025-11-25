@@ -347,31 +347,31 @@ def run_multi_body_grm_test():
                 recent_clean = recent_residuals[~np.isnan(recent_residuals)]
                 if len(recent_clean) > 0:
                     mass = grm_model.compute_mass(recent_clean)[-1]
-                    correction = grm_model.compute_curvature_single(
+                correction = grm_model.compute_curvature_single(
                         recent_clean[-1], mass, time_since_shock=tau
-                    )
-                else:
-                    correction = 0.0
+                )
             else:
+                correction = 0.0
+        else:
                 correction = 0.0
             
             # NaN kontrolü
-            if np.isnan(baseline_pred) or np.isnan(correction):
+        if np.isnan(baseline_pred) or np.isnan(correction):
                 correction = 0.0
-            if np.isnan(baseline_pred):
+        if np.isnan(baseline_pred):
                 baseline_pred = 0.0
             
-            final_pred = baseline_pred + correction
-            predictions.append(final_pred)
+        final_pred = baseline_pred + correction
+        predictions.append(final_pred)
             
-            actual = test_data.iloc[i]
-            residual = actual - baseline_pred
-            all_residuals.append(residual)
+        actual = test_data.iloc[i]
+        residual = actual - baseline_pred
+        all_residuals.append(residual)
             
-            if len(all_residuals) > grm_model.window_size:
+        if len(all_residuals) > grm_model.window_size:
                 shock_times = grm_model.detect_shocks(np.array(all_residuals))
             
-            if i < len(test_data) - 1:
+        if i < len(test_data) - 1:
                 try:
                     baseline_model.fitted_model = baseline_model.fitted_model.append(
                         [actual], refit=False

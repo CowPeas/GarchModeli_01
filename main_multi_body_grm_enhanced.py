@@ -51,7 +51,7 @@ from models import (
     quick_coverage_check
 )
 
-from config_phase3 import (
+from config_enhanced import (  # ← Changed from config_phase3
     REAL_DATA_CONFIG,
     SPLIT_CONFIG,
     OUTPUT_PATHS,
@@ -416,7 +416,10 @@ class EnhancedMultiBodyGRMRunner:
         # 7. Validate regime coverage
         # Predict test regimes
         test_regime_labels = np.array([
-            multi_body_grm_final.predict_regime(test_df['y'].iloc[i:i+1].values)
+            multi_body_grm_final.predict_regime(
+                test_df['y'].iloc[i:i+1].values,
+                current_time=i  # ← Fixed: Added missing argument
+            )
             for i in range(len(test_df))
         ])
         

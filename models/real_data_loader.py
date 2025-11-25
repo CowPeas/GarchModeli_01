@@ -66,8 +66,8 @@ class RealDataLoader:
         Tuple[pd.DataFrame, Dict]
             (veri, metadata)
         """
-        print(f"📥 {ticker} verisi indiriliyor...")
-        print(f"   Tarih aralığı: {start_date} - {end_date}")
+        print(f"[LOADING] {ticker} verisi indiriliyor...")
+        print(f"          Tarih araligi: {start_date} - {end_date}")
         
         # ============================================================
         # GÜÇLÜ SSL BYPASS - TÜM YÖNTEMLER BİRDEN
@@ -301,9 +301,9 @@ def load_popular_assets(
         start_date = start_dt.strftime('%Y-%m-%d')
     
     print(f"\n{'='*80}")
-    print(f"📦 {len(assets)} VARLIK İÇİN VERİ YÜKLEME")
+    print(f"[MULTI-ASSET] {len(assets)} VARLIK ICIN VERI YUKLEME")
     print(f"{'='*80}")
-    print(f"Tarih aralığı: {start_date} - {end_date}\n")
+    print(f"Tarih araligi: {start_date} - {end_date}\n")
     
     results = {}
     success_count = 0

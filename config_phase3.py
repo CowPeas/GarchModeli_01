@@ -146,6 +146,7 @@ METRICS_CONFIG = {
 # Regime Analysis Config (YENİ)
 REGIME_CONFIG = {
     'enable_regime_analysis': True,
+    'window_size': 20,  # GRM window size for regime detection
     'dbscan_eps': 0.5,
     'dbscan_min_samples': 5,
     'auto_tune_dbscan': True  # Otomatik parametre ayarlama

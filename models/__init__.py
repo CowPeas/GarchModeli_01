@@ -11,6 +11,7 @@ ENHANCED: İstatistiksel testler, Bootstrap CI, Rejim analizi, Kapsamlı karşı
 
 from models.data_generator import SyntheticDataGenerator
 from models.baseline_model import BaselineARIMA
+from models.baseline_model import BaselineARIMA as BaselineModel  # Alias for compatibility
 from models.grm_model import SchwarzschildGRM
 from models.kerr_grm_model import KerrGRM
 from models.metrics import ModelEvaluator, calculate_rmse, calculate_mae
@@ -44,10 +45,22 @@ from models.robust_estimation import RobustGRM
 # ANALYSIS & VALIDATION MODULES (ENHANCED)
 from models.stratified_split import StratifiedTimeSeriesSplit, compare_split_strategies
 from models.regime_coverage_validator import RegimeCoverageValidator, quick_coverage_check
+from models.window_stratified_split import WindowStratifiedSplit, quick_window_split
+from models.gmm_regime_detector import (
+    GMMRegimeDetector,
+    auto_select_gmm_components,
+    compare_regime_methods
+)
+
+# IMPROVED MODULES (Performance Enhancement)
+from models.grm_hyperparameter_tuning import GRMGridSearch, quick_tune_grm
+from models.ensemble_grm import EnsembleGRM, create_ensemble_from_grid
+from models.adaptive_grm import AdaptiveAlphaGRM, MultiRegimeAdaptiveGRM
 
 __all__ = [
     'SyntheticDataGenerator',
     'BaselineARIMA',
+    'BaselineModel',  # Alias for BaselineARIMA
     'SchwarzschildGRM',
     'KerrGRM',
     'ModelEvaluator',
@@ -92,9 +105,22 @@ __all__ = [
     'StratifiedTimeSeriesSplit',
     'compare_split_strategies',
     'RegimeCoverageValidator',
-    'quick_coverage_check'
+    'quick_coverage_check',
+    'WindowStratifiedSplit',
+    'quick_window_split',
+    # GMM Alternative
+    'GMMRegimeDetector',
+    'auto_select_gmm_components',
+    'compare_regime_methods',
+    # Performance Improvements
+    'GRMGridSearch',
+    'quick_tune_grm',
+    'EnsembleGRM',
+    'create_ensemble_from_grid',
+    'AdaptiveAlphaGRM',
+    'MultiRegimeAdaptiveGRM'
 ]
 
-__version__ = '4.1.0'  # Advanced Roadmap + Analysis & Validation (COMPLETE)
+__version__ = '4.2.0'  # Multi-Asset + Window Split + GMM (PEP8/PEP257)
 __author__ = 'GRM Project Team'
 

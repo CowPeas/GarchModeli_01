@@ -257,7 +257,7 @@ class SchwarzschildGRM:
         best_alpha = None
         best_beta = None
         
-        print("\n🔍 GRM Parametre Optimizasyonu:")
+        print("\n[OPTIMIZE] GRM Parametre Optimizasyonu:")
         print("-" * 50)
         
         for alpha in alpha_range:
@@ -279,7 +279,7 @@ class SchwarzschildGRM:
                     (predictions[:min_len] - targets[:min_len]) ** 2
                 ))
                 
-                print(f"α={alpha:.2f}, β={beta:.3f} → RMSE={rmse:.4f}")
+                print(f"alpha={alpha:.2f}, beta={beta:.3f} -> RMSE={rmse:.4f}")
                 
                 if rmse < best_rmse:
                     best_rmse = rmse
@@ -292,8 +292,8 @@ class SchwarzschildGRM:
         self.shock_times = []
         
         print("-" * 50)
-        print(f"✓ En iyi parametreler: α={best_alpha:.2f}, "
-              f"β={best_beta:.3f}, RMSE={best_rmse:.4f}\n")
+        print(f"[OK] En iyi parametreler: alpha={best_alpha:.2f}, "
+              f"beta={best_beta:.3f}, RMSE={best_rmse:.4f}\n")
         
         return best_alpha, best_beta
     
