@@ -40,7 +40,6 @@ Thumbs.db
 # Project specific
 data/*.csv
 results/*.txt
-visualizations/*.png
 *.log
 
 # Keep directory structure
