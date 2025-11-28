@@ -25,7 +25,8 @@ from models import (
     GRMFeatureEngineer,
     GMMRegimeDetector,
     WindowStratifiedSplit,
-    create_ensemble_from_grid
+    create_ensemble_from_grid,
+    GRMVisualizer
 )
 from config_enhanced import (
     REAL_DATA_CONFIG,
@@ -259,6 +260,11 @@ def test_single_asset_improved(ticker: str = 'BTC-USD'):
         logger.info(f"  Mean |correction|: {np.mean(np.abs(ensemble_corrections)):.6f}")
     
     # Test adaptive if enabled
+    adaptive_pred = test_pred.copy()
+    adaptive_corrections_array = np.zeros(len(test_df))
+    alpha_history = []
+    volatility_history = []
+    
     if ADAPTIVE_CONFIG['enable_adaptive']:
         adaptive_corrections = []
         
@@ -272,10 +278,22 @@ def test_single_asset_improved(ticker: str = 'BTC-USD'):
                     baseline_pred=test_pred[i]
                 )
                 adaptive_corrections.append(correction)
+                
+                # Track alpha and volatility
+                if hasattr(adaptive_grm, 'alpha_history') and len(adaptive_grm.alpha_history) > 0:
+                    alpha_history.append(adaptive_grm.alpha_history[-1])
+                if hasattr(adaptive_grm, 'mass_history') and len(adaptive_grm.mass_history) > 0:
+                    volatility_history.append(adaptive_grm.mass_history[-1])
+                    
             except Exception:
                 adaptive_corrections.append(0.0)
+                if len(alpha_history) > 0:
+                    alpha_history.append(alpha_history[-1])
+                if len(volatility_history) > 0:
+                    volatility_history.append(volatility_history[-1])
         
-        adaptive_pred = test_pred + np.array(adaptive_corrections)
+        adaptive_corrections_array = np.array(adaptive_corrections)
+        adaptive_pred = test_pred + adaptive_corrections_array
         adaptive_rmse = np.sqrt(np.mean((test_df['returns'].values - adaptive_pred) ** 2))
         
         improvement = (baseline_rmse - adaptive_rmse) / baseline_rmse * 100
@@ -289,6 +307,82 @@ def test_single_asset_improved(ticker: str = 'BTC-USD'):
         logger.info(f"  Mean α: {stats.get('mean_alpha', 0):.3f}")
         logger.info(f"  α range: [{stats.get('min_alpha', 0):.3f}, {stats.get('max_alpha', 0):.3f}]")
         logger.info(f"  α-volatility correlation: {stats.get('correlation', 0):.3f}")
+    
+    # === VISUALIZATION ===
+    logger.info(f"\n{'='*80}")
+    logger.info("  CREATING VISUALIZATIONS")
+    logger.info(f"{'='*80}\n")
+    
+    try:
+        visualizer = GRMVisualizer(output_dir='visualizations')
+        
+        # Prepare metrics
+        ensemble_rmse_val = ensemble_rmse if ENSEMBLE_CONFIG['enable_ensemble'] else baseline_rmse
+        adaptive_rmse_val = adaptive_rmse if ADAPTIVE_CONFIG['enable_adaptive'] else baseline_rmse
+        
+        ensemble_improvement = ((baseline_rmse - ensemble_rmse_val) / baseline_rmse * 100) if ENSEMBLE_CONFIG['enable_ensemble'] else 0.0
+        adaptive_improvement = ((baseline_rmse - adaptive_rmse_val) / baseline_rmse * 100) if ADAPTIVE_CONFIG['enable_adaptive'] else 0.0
+        
+        metrics = {
+            'Baseline': {
+                'rmse': baseline_rmse,
+                'mae': np.mean(np.abs(test_df['returns'].values - test_pred)),
+                'improvement': 0.0
+            },
+            'Ensemble': {
+                'rmse': ensemble_rmse_val,
+                'mae': np.mean(np.abs(test_df['returns'].values - ensemble_pred)),
+                'improvement': ensemble_improvement
+            },
+            'Adaptive': {
+                'rmse': adaptive_rmse_val,
+                'mae': np.mean(np.abs(test_df['returns'].values - adaptive_pred)),
+                'improvement': adaptive_improvement
+            }
+        }
+        
+        # Get ensemble corrections array
+        ensemble_corrections_array = np.array(ensemble_corrections) if ENSEMBLE_CONFIG['enable_ensemble'] else np.zeros(len(test_df))
+        
+        # Use defaults if alpha/volatility history not available
+        if len(alpha_history) == 0:
+            alpha_history = [ADAPTIVE_CONFIG['base_alpha']] * len(test_df)
+        if len(volatility_history) == 0:
+            # Estimate from test data
+            window = 20
+            volatility_history = []
+            for i in range(len(test_df)):
+                if i < window:
+                    volatility_history.append(np.std(test_df['returns'].values[:i+1]))
+                else:
+                    volatility_history.append(np.std(test_df['returns'].values[i-window:i]))
+        
+        alpha_history = np.array(alpha_history)
+        volatility_history = np.array(volatility_history)
+        
+        # Create comprehensive report
+        visualizer.create_comprehensive_report(
+            test_df=test_df,
+            baseline_pred=test_pred,
+            ensemble_pred=ensemble_pred,
+            ensemble_corrections=ensemble_corrections_array,
+            adaptive_pred=adaptive_pred,
+            adaptive_corrections=adaptive_corrections_array,
+            alpha_history=alpha_history,
+            volatility_history=volatility_history,
+            regime_labels=regime_labels,
+            train_df=train_df,
+            val_df=val_df,
+            metrics=metrics,
+            ticker=ticker
+        )
+        
+        logger.info("\n[SUCCESS] All visualizations created successfully!")
+        
+    except Exception as e:
+        logger.error(f"\n[ERROR] Visualization failed: {e}")
+        import traceback
+        traceback.print_exc()
     
     logger.info(f"\n{'='*80}")
     logger.info("  TEST COMPLETED")

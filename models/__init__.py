@@ -57,6 +57,9 @@ from models.grm_hyperparameter_tuning import GRMGridSearch, quick_tune_grm
 from models.ensemble_grm import EnsembleGRM, create_ensemble_from_grid
 from models.adaptive_grm import AdaptiveAlphaGRM, MultiRegimeAdaptiveGRM
 
+# VISUALIZATION UTILITIES
+from models.visualization_utils import GRMVisualizer
+
 __all__ = [
     'SyntheticDataGenerator',
     'BaselineARIMA',
@@ -118,7 +121,8 @@ __all__ = [
     'EnsembleGRM',
     'create_ensemble_from_grid',
     'AdaptiveAlphaGRM',
-    'MultiRegimeAdaptiveGRM'
+    'MultiRegimeAdaptiveGRM',
+    'GRMVisualizer'
 ]
 
 __version__ = '4.2.0'  # Multi-Asset + Window Split + GMM (PEP8/PEP257)
