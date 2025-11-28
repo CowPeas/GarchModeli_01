@@ -41,7 +41,7 @@ Thumbs.db
 data/*.csv
 results/*.txt
 *.log
-
+ProjectStempsForGARCHmd
 # Keep directory structure
 !data/.gitkeep
 !results/.gitkeep
