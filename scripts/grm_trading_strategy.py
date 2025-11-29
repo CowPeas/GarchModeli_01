@@ -308,6 +308,8 @@ class GRMTradingStrategy:
             current_price = self.prices[idx]
 
             # Check stop loss
+            # For long positions: stop loss triggers when pnl_pct < -stop_loss_pct (price drop)
+            # For short positions: stop loss triggers when pnl_pct > stop_loss_pct (price rise)
             if self.position != 0:
                 pnl_pct = (
                     (current_price - self.entry_price) / self.entry_price
